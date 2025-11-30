@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Visit Counter</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    h2 { text-align: center; }
+    .container { max-width: 500px; margin: auto; }
+
+    .student {
+      background: white;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 10px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .student button.nameBtn {
+      padding: 10px 14px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      flex: 1;
+      text-align: left;
+    }
+
+    .countBox {
+      background: #e8f3ff;
+      padding: 8px 10px;
+      border-radius: 8px;
+      min-width: 50px;
+      text-align: center;
+    }
+
+    .smallBtn {
+      padding: 8px 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .resetBtn { background: #ff5252; color: white; }
+    .deleteBtn { background: #555; color: white; }
+
+    #addBox { display: flex; gap: 10px; margin-top: 20px; }
+    #addBox input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+    #addBox button { padding: 10px 20px; border: none; background: green; color: white; border-radius: 8px; cursor: pointer; }
+
+    .hint { font-size: 13px; color: #666; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Student Visit Counter</h2>
+
+    <div id="students"></div>
+
+    <div id="addBox">
+      <input id="newStudent" placeholder="Enter student name" />
+      <button onclick="addStudent()">Add</button>
+    </div>
+    <div class="hint">Tip: tap a name to increase the count. Use Delete to remove a student and their data.</div>
+  </div>
+
+  <script>
+    // Helpers
+    function loadStudents() {
+      const saved = localStorage.getItem('studentList');
+      return saved ? JSON.parse(saved) : [];
+    }
+    function saveStudents(list) {
+      localStorage.setItem('studentList', JSON.stringify(list));
+    }
+    function sanitizeId(name) {
+      return 's_' + name.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_-]/g,'');
+    }
+
+    // Render using DOM (no inline onclicks) so Delete will always work
+    function renderStudents() {
+      const list = loadStudents();
+      const box = document.getElementById('students');
+      box.innerHTML = '';
+
+      list.forEach(name => {
+        const count = localStorage.getItem(name + '-count') || '0';
+        const row = document.createElement('div');
+        row.className = 'student';
+
+        const nameBtn = document.createElement('button');
+        nameBtn.className = 'nameBtn';
+        nameBtn.textContent = name;
+
+        const safeId = sanitizeId(name);
+        nameBtn.addEventListener('click', () => increase(name, safeId));
+
+        const countBox = document.createElement('div');
+        countBox.className = 'countBox';
+        countBox.id = safeId + '-count';
+        countBox.textContent = count;
+
+        const resetBtn = document.createElement('button');
+        resetBtn.className = 'smallBtn resetBtn';
+        resetBtn.textContent = 'Reset';
+        resetBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          resetOne(name, safeId);
+        });
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'smallBtn deleteBtn';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeStudent(name);
+        });
+
+        row.appendChild(nameBtn);
+        row.appendChild(countBox);
+        row.appendChild(resetBtn);
+        row.appendChild(deleteBtn);
+
+        box.appendChild(row);
+      });
+    }
+
+    function addStudent() {
+      const name = document.getElementById('newStudent').value.trim();
+      if (!name) return;
+      const list = loadStudents();
+      if (!list.includes(name)) list.push(name);
+      saveStudents(list);
+      document.getElementById('newStudent').value = '';
+      renderStudents();
+    }
+
+    function removeStudent(name) {
+      if (!confirm('Remove this student and their stored count?')) return;
+      let list = loadStudents();
+      list = list.filter(n => n !== name);
+      saveStudents(list);
+      localStorage.removeItem(name + '-count');
+      renderStudents();
+    }
+
+    function increase(name, safeId) {
+      let count = parseInt(localStorage.getItem(name + '-count') || 0);
+      count++;
+      localStorage.setItem(name + '-count', count);
+      const id = safeId || sanitizeId(name);
+      const el = document.getElementById(id + '-count');
+      if (el) el.textContent = count;
+    }
+
+    function resetOne(name, safeId) {
+      localStorage.setItem(name + '-count', 0);
+      const id = safeId || sanitizeId(name);
+      const el = document.getElementById(id + '-count');
+      if (el) el.textContent = '0';
+    }
+
+    window.onload = renderStudents;
+  </script>
+</body>
+</html>
+
